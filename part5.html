@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8" />
+    <title>Penelope Charmosa - Parte 5</title>
+    <script src="//cdn.jsdelivr.net/npm/phaser@3.11.0/dist/phaser.js"></script>
+    <style>body { margin: 0; background: #3a0e3f; }</style>
+</head>
+<body>
+<script>
+var config = { type: Phaser.AUTO, width: 800, height: 600, physics: { default: "arcade", arcade: { gravity: { y: 300 } } }, scene: { preload: preload, create: create, update: update } };
+var player, platforms, cursors;
+var game = new Phaser.Game(config);
+function preload() {
+    this.load.image("scene", "assests/espaco.jpg");
+    this.load.image("platform-art", "assests/plataformas.png");
+    this.load.spritesheet("penelope-right", "assests/penelop-direita.png", { frameWidth: 275, frameHeight: 384 });
+    this.load.spritesheet("penelope-left", "assests/penelope-esquerda.png", { frameWidth: 275, frameHeight: 384 });
+}
+function create() {
+    this.add.image(400, 300, "scene").setDisplaySize(800, 600);
+    platforms = this.physics.add.staticGroup();
+    [[400, 568, 800, 64], [600, 400, 220, 28], [50, 250, 220, 28], [750, 220, 220, 28]].forEach(function (p) {
+        var platform = platforms.create(p[0], p[1], "platform-art");
+        platform.setVisible(false).setDisplaySize(p[2], p[3]).refreshBody();
+    });
+    this.add.image(400, 300, "platform-art").setDisplaySize(800, 600).setDepth(1);
+    player = this.physics.add.sprite(100, 450, "penelope-right", 0).setScale(0.28);
+    player.setBounce(0.2).setCollideWorldBounds(true);
+    this.physics.add.collider(player, platforms);
+    this.anims.create({ key: "left", frames: this.anims.generateFrameNumbers("penelope-left", { start: 0, end: 9 }), frameRate: 10, repeat: -1 });
+    this.anims.create({ key: "right", frames: this.anims.generateFrameNumbers("penelope-right", { start: 0, end: 9 }), frameRate: 10, repeat: -1 });
+    cursors = this.input.keyboard.createCursorKeys();
+}
+function update() {
+    if (cursors.left.isDown) {
+        player.setVelocityX(-160).setTexture("penelope-left", 0);
+        player.anims.play("left", true);
+    } else if (cursors.right.isDown) {
+        player.setVelocityX(160).setTexture("penelope-right", 0);
+        player.anims.play("right", true);
+    } else {
+        player.setVelocityX(0);
+        player.anims.stop();
+    }
+    if (cursors.up.isDown && player.body.touching.down) player.setVelocityY(-330);
+}
+</script>
+</body>
+</html>

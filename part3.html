@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8" />
+    <title>Penelope Charmosa - Parte 3</title>
+    <script src="//cdn.jsdelivr.net/npm/phaser@3.11.0/dist/phaser.js"></script>
+    <style>body { margin: 0; background: #3a0e3f; }</style>
+</head>
+<body>
+<script>
+var config = { type: Phaser.AUTO, width: 800, height: 600, physics: { default: "arcade" }, scene: { preload: preload, create: create, update: update } };
+var platforms;
+var game = new Phaser.Game(config);
+function preload() {
+    this.load.image("scene", "assests/espaco.jpg");
+    this.load.image("platform-art", "assests/plataformas.png");
+}
+function create() {
+    this.add.image(400, 300, "scene").setDisplaySize(800, 600);
+    platforms = this.physics.add.staticGroup();
+    var ground = platforms.create(400, 568, "platform-art");
+    ground.setVisible(false).setDisplaySize(800, 64).refreshBody();
+    [[600, 400], [50, 250], [750, 220]].forEach(function (position) {
+        var platform = platforms.create(position[0], position[1], "platform-art");
+        platform.setVisible(false).setDisplaySize(220, 28).refreshBody();
+    });
+    this.add.image(400, 300, "platform-art").setDisplaySize(800, 600).setDepth(1);
+}
+function update() {}
+</script>
+</body>
+</html>

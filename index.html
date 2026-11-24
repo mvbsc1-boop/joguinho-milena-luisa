@@ -1,0 +1,275 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Aventura da Penelope</title>
+    <script src="https://cdn.jsdelivr.net/npm/phaser@3.11.0/dist/phaser.js"></script>
+    <style>
+        :root {
+            color-scheme: dark;
+            font-family: "Trebuchet MS", Arial, sans-serif;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        html,
+        body {
+            width: 100%;
+            height: 100%;
+            margin: 0;
+            overflow: hidden;
+            background: #3a0e3f;
+        }
+
+        #game-root {
+            position: fixed;
+            inset: 0;
+            display: grid;
+            place-items: center;
+        }
+
+        #game-root canvas {
+            display: block;
+            max-width: 100vw;
+            max-height: 100vh;
+            image-rendering: pixelated;
+        }
+
+        #hud {
+            position: fixed;
+            z-index: 10;
+            top: 16px;
+            left: 16px;
+            right: 16px;
+            display: flex;
+            justify-content: space-between;
+            pointer-events: none;
+        }
+
+        .hud-chip {
+            min-height: 42px;
+            display: flex;
+            align-items: center;
+            padding: 8px 15px;
+            border: 2px solid #ffc5df;
+            border-radius: 999px;
+            background: rgba(99, 31, 92, 0.88);
+            box-shadow: 0 5px 16px rgba(61, 11, 58, 0.35);
+            color: #fff7fb;
+            font-size: 15px;
+            font-weight: 800;
+        }
+    </style>
+</head>
+<body>
+    <div id="game-root" aria-label="Aventura da Penelope"></div>
+    <div id="hud">
+        <div class="hud-chip">PENELOPE</div>
+        <div class="hud-chip">Coracoes: <span id="score">&nbsp;0</span></div>
+    </div>
+
+    <script>
+        var WIDTH = 960;
+        var HEIGHT = 640;
+        var player;
+        var playerVisual;
+        var platforms;
+        var hearts;
+        var cursors;
+        var wasd;
+        var spaceKey;
+        var jumpReady = true;
+        var score = 0;
+
+        var platformLayout = [
+            [480, 512, 960, 56],
+            [155, 440, 230, 30],
+            [390, 350, 230, 30],
+            [625, 260, 230, 30],
+            [825, 385, 190, 30]
+        ];
+
+        var config = {
+            type: Phaser.AUTO,
+            parent: "game-root",
+            width: WIDTH,
+            height: HEIGHT,
+            backgroundColor: "#f5a4d0",
+            render: {
+                pixelArt: true,
+                antialias: false
+            },
+            physics: {
+                default: "arcade",
+                arcade: {
+                    gravity: { y: 680 },
+                    debug: false
+                }
+            },
+            scene: {
+                preload: preload,
+                create: create,
+                update: update
+            }
+        };
+
+        var game = new Phaser.Game(config);
+
+        function preload() {
+            this.load.image("scene", "assests/espaco.jpg");
+            this.load.spritesheet("penelope-right", "assests/penelop-direita.png", {
+                frameWidth: 275,
+                frameHeight: 384
+            });
+            this.load.spritesheet("penelope-left", "assests/penelope-esquerda.png", {
+                frameWidth: 275,
+                frameHeight: 384
+            });
+        }
+
+        function create() {
+            var scene = this;
+
+            this.add.image(WIDTH / 2, HEIGHT / 2, "scene").setDisplaySize(WIDTH, HEIGHT);
+            createPlatformTexture(this);
+
+            platforms = this.physics.add.staticGroup();
+            platformLayout.forEach(function (position) {
+                addPlatform(scene, position[0], position[1], position[2], position[3]);
+            });
+
+            createHeartTexture(this);
+            player = this.physics.add.sprite(120, 430, "heart").setVisible(false);
+            player.body.setSize(72, 20);
+            player.body.setOffset(-20, 6);
+            player.body.setBounce(0.04);
+            player.body.setCollideWorldBounds(true);
+            playerVisual = this.add.sprite(120, 380, "penelope-right", 0).setScale(0.38);
+
+            createAnimations(this);
+
+            cursors = this.input.keyboard.createCursorKeys();
+            wasd = this.input.keyboard.addKeys("W,A,S,D");
+            spaceKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
+
+            hearts = this.physics.add.staticGroup();
+            respawnHearts(this);
+
+            this.physics.add.collider(player, platforms);
+            this.physics.add.overlap(player, hearts, collectHeart, null, this);
+        }
+
+        function addPlatform(scene, x, y, width, height) {
+            var platform = platforms.create(x, y, "platform");
+            platform.setDisplaySize(width, height);
+            platform.refreshBody();
+        }
+
+        function createPlatformTexture(scene) {
+            var graphics = scene.make.graphics({ x: 0, y: 0, add: false });
+            graphics.fillStyle(0x37102f, 1);
+            graphics.fillRoundedRect(4, 10, 312, 42, 12);
+            graphics.fillStyle(0x71305c, 1);
+            graphics.fillRoundedRect(4, 3, 312, 39, 12);
+            graphics.lineStyle(4, 0xffc7df, 1);
+            graphics.strokeRoundedRect(4, 3, 312, 39, 12);
+            graphics.fillStyle(0xf8c1da, 1);
+            graphics.fillRoundedRect(10, 7, 300, 11, 5);
+            for (var x = 10; x < 310; x += 24) {
+                if ((x - 10) % 48 === 0) {
+                    graphics.fillStyle(0xb73882, 1);
+                    graphics.fillRect(x, 7, 12, 11);
+                }
+            }
+            graphics.lineStyle(2, 0xffdf9a, 0.9);
+            graphics.strokeRoundedRect(10, 21, 300, 15, 5);
+            graphics.generateTexture("platform", 320, 56);
+            graphics.destroy();
+        }
+
+        function createAnimations(scene) {
+            scene.anims.create({
+                key: "penelope-run-right",
+                frames: scene.anims.generateFrameNumbers("penelope-right", { start: 0, end: 9 }),
+                frameRate: 10,
+                repeat: -1
+            });
+            scene.anims.create({
+                key: "penelope-run-left",
+                frames: scene.anims.generateFrameNumbers("penelope-left", { start: 0, end: 9 }),
+                frameRate: 10,
+                repeat: -1
+            });
+        }
+
+        function createHeartTexture(scene) {
+            if (scene.textures.exists("heart")) {
+                return;
+            }
+
+            var graphics = scene.make.graphics({ x: 0, y: 0, add: false });
+            graphics.fillStyle(0xff4f9a, 1);
+            graphics.fillCircle(9, 12, 8);
+            graphics.fillCircle(23, 12, 8);
+            graphics.fillTriangle(3, 15, 29, 15, 16, 31);
+            graphics.fillStyle(0xffa7ca, 1);
+            graphics.fillCircle(8, 10, 3);
+            graphics.generateTexture("heart", 32, 32);
+            graphics.destroy();
+        }
+
+        function respawnHearts(scene) {
+            hearts.clear(true, true);
+            platformLayout.slice(1).forEach(function (platform, index) {
+                var heartX = platform[0] + (index === 0 ? 65 : 0);
+                var position = [heartX, platform[1] - platform[3] / 2 - 20];
+                var heart = hearts.create(position[0], position[1], "heart");
+                heart.setScale(1.15);
+                heart.refreshBody();
+            });
+        }
+
+        function update() {
+            var movingLeft = cursors.left.isDown || wasd.A.isDown;
+            var movingRight = cursors.right.isDown || wasd.D.isDown;
+            var jumpHeld = cursors.up.isDown || wasd.W.isDown || spaceKey.isDown;
+
+            if (movingLeft) {
+                player.setVelocityX(-230);
+                playerVisual.anims.play("penelope-run-left", true);
+            } else if (movingRight) {
+                player.setVelocityX(230);
+                playerVisual.anims.play("penelope-run-right", true);
+            } else {
+                player.setVelocityX(0);
+                playerVisual.anims.stop();
+                playerVisual.setFrame(0);
+            }
+
+            if (!jumpHeld) {
+                jumpReady = true;
+            } else if (jumpReady && (player.body.touching.down || player.body.blocked.down)) {
+                player.setVelocityY(-560);
+                jumpReady = false;
+            }
+
+            playerVisual.setPosition(player.x, player.y - 50);
+        }
+
+        function collectHeart(playerSprite, heart) {
+            heart.disableBody(true, true);
+            score += 1;
+            document.getElementById("score").textContent = " " + score;
+
+            if (hearts.countActive(true) === 0) {
+                respawnHearts(this);
+                player.setPosition(120, 430);
+                player.setVelocity(0, 0);
+            }
+        }
+    </script>
+</body>
+</html>

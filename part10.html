@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8" />
+    <title>Penelope Charmosa - Parte 10</title>
+    <script src="//cdn.jsdelivr.net/npm/phaser@3.11.0/dist/phaser.js"></script>
+    <style>body { margin: 0; overflow: hidden; background: #3a0e3f; }</style>
+</head>
+<body>
+<script>
+var config = { type: Phaser.AUTO, width: 800, height: 600, physics: { default: "arcade", arcade: { gravity: { y: 300 }, debug: false } }, scene: { preload: preload, create: create, update: update } };
+var player, hearts, platforms, hazards, cursors, score = 0, scoreText, gameOver = false;
+var game = new Phaser.Game(config);
+function preload() {
+    this.load.image("scene", "assests/espaco.jpg");
+    this.load.image("platform-art", "assests/plataformas.png");
+    this.load.spritesheet("penelope-right", "assests/penelop-direita.png", { frameWidth: 275, frameHeight: 384 });
+    this.load.spritesheet("penelope-left", "assests/penelope-esquerda.png", { frameWidth: 275, frameHeight: 384 });
+}
+function create() {
+    this.add.image(400, 300, "scene").setDisplaySize(800, 600);
+    platforms = this.physics.add.staticGroup();
+    [[400, 568, 800, 64], [600, 400, 220, 28], [50, 250, 220, 28], [750, 220, 220, 28]].forEach(function (p) {
+        var platform = platforms.create(p[0], p[1], "platform-art");
+        platform.setVisible(false).setDisplaySize(p[2], p[3]).refreshBody();
+    });
+    this.add.image(400, 300, "platform-art").setDisplaySize(800, 600).setDepth(1);
+    player = this.physics.add.sprite(100, 450, "penelope-right", 0).setScale(0.28);
+    player.setBounce(0.2).setCollideWorldBounds(true);
+    this.anims.create({ key: "left", frames: this.anims.generateFrameNumbers("penelope-left", { start: 0, end: 9 }), frameRate: 10, repeat: -1 });
+    this.anims.create({ key: "right", frames: this.anims.generateFrameNumbers("penelope-right", { start: 0, end: 9 }), frameRate: 10, repeat: -1 });
+    cursors = this.input.keyboard.createCursorKeys();
+    hearts = this.physics.add.group();
+    for (var x = 12; x < 800; x += 70) {
+        var heart = hearts.create(x, 20, "penelope-right");
+        heart.setVisible(false);
+        heart.setBounceY(Phaser.Math.FloatBetween(0.4, 0.8));
+    }
+    hazards = this.physics.add.group();
+    scoreText = this.add.text(16, 16, "Coracoes: 0", { fontSize: "28px", fill: "#fff" });
+    this.physics.add.collider(player, platforms);
+    this.physics.add.collider(hearts, platforms);
+    this.physics.add.collider(hazards, platforms);
+    this.physics.add.overlap(player, hearts, collectHeart, null, this);
+    this.physics.add.overlap(player, hazards, hitHazard, null, this);
+}
+function update() {
+    if (gameOver) return;
+    if (cursors.left.isDown) {
+        player.setVelocityX(-160).setTexture("penelope-left", 0);
+        player.anims.play("left", true);
+    } else if (cursors.right.isDown) {
+        player.setVelocityX(160).setTexture("penelope-right", 0);
+        player.anims.play("right", true);
+    } else {
+        player.setVelocityX(0);
+        player.anims.stop();
+    }
+    if (cursors.up.isDown && player.body.touching.down) player.setVelocityY(-330);
+}
+function collectHeart(playerSprite, heart) {
+    heart.disableBody(true, true);
+    score += 10;
+    scoreText.setText("Coracoes: " + score);
+    if (hearts.countActive(true) === 0) {
+        hearts.children.iterate(function (child) {
+            child.enableBody(true, child.x, 0, true, true);
+        });
+        var x = player.x < 400 ? Phaser.Math.Between(400, 800) : Phaser.Math.Between(0, 400);
+        var hazard = hazards.create(x, 16, "platform-art");
+        hazard.setVisible(false).setBounce(1).setCollideWorldBounds(true);
+        hazard.setVelocity(Phaser.Math.Between(-200, 200), 20).allowGravity = false;
+    }
+}
+function hitHazard(playerSprite, hazard) {
+    this.physics.pause();
+    player.setTint(0xff7777);
+    player.anims.stop();
+    gameOver = true;
+}
+</script>
+</body>
+</html>
