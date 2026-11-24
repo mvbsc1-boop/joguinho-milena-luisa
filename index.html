@@ -49,6 +49,24 @@
             pointer-events: none;
         }
 
+        #jump-button {
+            position: fixed;
+            z-index: 11;
+            right: 20px;
+            bottom: 20px;
+            min-width: 100px;
+            min-height: 54px;
+            border: 2px solid #fff0f8;
+            border-radius: 999px;
+            background: #d94391;
+            box-shadow: 0 5px 16px rgba(61, 11, 58, 0.45);
+            color: #fff;
+            font: inherit;
+            font-weight: 800;
+            cursor: pointer;
+            touch-action: manipulation;
+        }
+
         .hud-chip {
             min-height: 42px;
             display: flex;
@@ -70,6 +88,7 @@
         <div class="hud-chip">PENELOPE</div>
         <div class="hud-chip">Coracoes: <span id="score">&nbsp;0</span></div>
     </div>
+    <button id="jump-button" type="button" aria-label="Fazer Penelope pular">PULAR</button>
 
     <script>
         var WIDTH = 960;
@@ -80,8 +99,6 @@
         var hearts;
         var cursors;
         var wasd;
-        var spaceKey;
-        var jumpReady = true;
         var score = 0;
 
         var platformLayout = [
@@ -153,7 +170,11 @@
 
             cursors = this.input.keyboard.createCursorKeys();
             wasd = this.input.keyboard.addKeys("W,A,S,D");
-            spaceKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
+            this.input.keyboard.on("keydown", function (event) {
+                if (event.code === "ArrowUp" || event.code === "Space" || event.code === "KeyW") {
+                    jumpPlayer();
+                }
+            });
 
             hearts = this.physics.add.staticGroup();
             respawnHearts(this);
@@ -235,8 +256,6 @@
         function update() {
             var movingLeft = cursors.left.isDown || wasd.A.isDown;
             var movingRight = cursors.right.isDown || wasd.D.isDown;
-            var jumpHeld = cursors.up.isDown || wasd.W.isDown || spaceKey.isDown;
-
             if (movingLeft) {
                 player.setVelocityX(-230);
                 playerVisual.anims.play("penelope-run-left", true);
@@ -249,14 +268,13 @@
                 playerVisual.setFrame(0);
             }
 
-            if (!jumpHeld) {
-                jumpReady = true;
-            } else if (jumpReady && (player.body.touching.down || player.body.blocked.down)) {
-                player.setVelocityY(-560);
-                jumpReady = false;
-            }
-
             playerVisual.setPosition(player.x, player.y - 50);
+        }
+
+        function jumpPlayer() {
+            if (player && player.active) {
+                player.setVelocityY(-560);
+            }
         }
 
         function collectHeart(playerSprite, heart) {
@@ -269,6 +287,8 @@
                 player.setPosition(120, 430);
                 player.setVelocity(0, 0);
             }
+
+            document.getElementById("jump-button").addEventListener("pointerdown", jumpPlayer);
         }
     </script>
 </body>
